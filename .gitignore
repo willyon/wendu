@@ -1,0 +1,13 @@
+.env
+apps/api/.env
+.venv
+venv
+__pycache__/
+*.pyc
+.DS_Store
+node_modules/
+apps/web/dist/
+apps/web/.e2e-out/
+apps/api/data/
+*.egg-info/
+.pytest_cache/
