@@ -38,8 +38,6 @@ class InstanceSettings(Base):
     openai_api_key: Mapped[str] = mapped_column(String(512), default="")
     openai_base_url: Mapped[str] = mapped_column(String(512), default="")
     openai_chat_model: Mapped[str] = mapped_column(String(128), default="")
-    openai_embed_model: Mapped[str] = mapped_column(String(128), default="")
-    embed_dim: Mapped[int] = mapped_column(Integer, default=1024)
 
 
 class File(Base):

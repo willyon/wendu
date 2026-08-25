@@ -3,6 +3,7 @@ from sqlalchemy import text
 
 from .bootstrap import bootstrap
 from .db import Base, SessionLocal, engine
+from .embed import preload_model
 from .errors import AppError, error_response
 from .i18n import parse_lang, set_request_lang
 from .routers_admin import router as admin_router
@@ -46,6 +47,7 @@ async def app_error_handler(_request: Request, exc: AppError):
 @app.on_event("startup")
 def on_startup():
     init_db()
+    preload_model()
 
 
 @app.get("/health")

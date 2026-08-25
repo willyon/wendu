@@ -9,7 +9,7 @@ from .accounts import is_login_valid, normalize_login
 from .auth import current_admin
 from .db import get_db
 from .errors import AppError, ok_message
-from .models import Chunk, Conversation, File, InstanceSettings, UsageDaily, User
+from .models import Conversation, File, InstanceSettings, UsageDaily, User
 from .passwords import hash_password, require_password
 from .storage import get_storage
 
@@ -29,8 +29,6 @@ class SettingsBody(BaseModel):
     openaiApiKey: str | None = None
     openaiBaseUrl: str | None = None
     openaiChatModel: str | None = None
-    openaiEmbedModel: str | None = None
-    embedDim: int | None = None
 
 
 def _settings_row(db: Session) -> InstanceSettings:
@@ -57,8 +55,6 @@ def get_settings(_admin: User = Depends(current_admin), db: Session = Depends(ge
         "openaiApiKey": row.openai_api_key,
         "openaiBaseUrl": row.openai_base_url,
         "openaiChatModel": row.openai_chat_model,
-        "openaiEmbedModel": row.openai_embed_model,
-        "embedDim": row.embed_dim or 1024,
     }
 
 
@@ -72,28 +68,12 @@ def put_settings(
     api_key = (body.openaiApiKey or "").strip()
     base_url = (body.openaiBaseUrl or "").strip()
     chat_model = (body.openaiChatModel or "").strip()
-    embed_model = (body.openaiEmbedModel or "").strip()
-    if not all([api_key, base_url, chat_model, embed_model]) or body.embedDim is None:
+    if not all([api_key, base_url, chat_model]):
         raise AppError("SETTINGS_INCOMPLETE", 400)
-
-    dim = int(body.embedDim)
-    if dim < 256 or dim > 4096:
-        raise AppError("INVALID_EMBED_DIM", 400)
-    current = row.embed_dim or 1024
-    if dim != current:
-        has_vectors = (
-            db.execute(select(Chunk.id).where(Chunk.embedding.isnot(None)).limit(1)).first()
-            is not None
-        )
-        if has_vectors:
-            raise AppError("EMBED_DIM_LOCKED", 400)
-        db.execute(text(f"ALTER TABLE chunks ALTER COLUMN embedding TYPE vector({dim})"))
 
     row.openai_api_key = api_key
     row.openai_base_url = base_url
     row.openai_chat_model = chat_model
-    row.openai_embed_model = embed_model
-    row.embed_dim = dim
     db.commit()
     return ok_message("SETTINGS_SAVED", ok=True)
 
@@ -175,7 +155,6 @@ def _purge_user_data(db: Session, user_id: UUID) -> None:
     db.execute(delete(Conversation).where(Conversation.user_id == user_id))
     db.execute(delete(File).where(File.user_id == user_id))
     db.execute(delete(UsageDaily).where(UsageDaily.user_id == user_id))
-    # 旧版邮箱激活 / 找回密码表可能仍在库中，会挡住删用户
     for table in ("email_verification_tokens", "password_reset_tokens"):
         exists = db.execute(
             text(

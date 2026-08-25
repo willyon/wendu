@@ -1,6 +1,6 @@
 export default {
   brand: "问牍",
-  tagline: "上传文档，对着你的材料提问，答案带出处。",
+  tagline: "导入文档，对着你的材料提问，答案带出处。",
   login: "登录",
   username: "用户名",
   password: "密码",
@@ -19,17 +19,17 @@ export default {
   adminChangePassword: "修改我的密码",
   adminLlm: "模型配置",
   adminModelIntro:
-    "填写 OpenAI 兼容接口，用于生成回答与材料向量化。Key 与模型配置只保存在本机数据库，须在下方完整填写。",
+    "填写 OpenAI 兼容接口，用于生成回答。Key 与 Chat 配置只保存在本机数据库。",
   adminModelGuideToggle: "如何获取与填写？",
   adminModelGuideStep1:
-    "在所用模型服务商控制台创建 API Key（须支持 OpenAI 兼容 Chat 与 Embedding 接口）。",
+    "在所用模型服务商控制台创建 API Key（须支持 OpenAI 兼容 Chat 接口）。",
   adminModelGuideStep2:
-    "将 Key、Base URL 与模型名填入下方；各字段按服务商文档填写，不同厂商示例见各输入框说明。",
+    "将 Key、Base URL 与对话模型名填入下方；各字段按服务商文档填写，不同厂商示例见各输入框说明。",
   adminModelGuideStep3: "保存后回到工作台上传材料并提问，确认能正常回答。",
   adminApiKey: "API Key",
   adminApiKeyPlaceholder: "填写你的 API Key",
   adminApiKeyHint:
-    "用于调用对话与 Embedding 接口。在服务商控制台创建，格式因厂商而异。",
+    "用于调用对话接口。在服务商控制台创建，格式因厂商而异。",
   adminBaseUrl: "Base URL",
   adminBaseUrlPlaceholder: "填写兼容接口根地址",
   adminBaseUrlHint:
@@ -38,15 +38,7 @@ export default {
   adminChatModelPlaceholder: "填写对话模型名称",
   adminChatModelHint:
     "用于生成回答。示例：gpt-4o-mini、qwen-plus、deepseek-chat 等。",
-  adminEmbedModel: "Embedding 模型",
-  adminEmbedModelPlaceholder: "填写 Embedding 模型名称",
-  adminEmbedModelHint:
-    "用于材料检索与切片向量化。示例：text-embedding-3-small、text-embedding-v3 等。更换后请删除旧材料并重新上传，否则检索不准。",
-  adminEmbedDim: "向量维度",
-  adminEmbedDimPlaceholder: "填写向量维度（整数）",
-  adminEmbedDimHint:
-    "须与 Embedding 模型输出维度一致。示例：1024、1536、3072。已有材料向量化后不可修改，需先删光文件。",
-  adminModelIncomplete: "请完整填写模型配置后再保存。",
+  adminModelIncomplete: "请完整填写 Chat 配置后再保存。",
   adminSave: "保存",
   adminSaved: "已保存",
   adminCreateUser: "创建用户",
@@ -71,7 +63,7 @@ export default {
   cancel: "取消",
   files: "资料库",
   ask: "问答",
-  privacy: "上传的文件只用于为你生成回答，不会用于其它途径。",
+  // privacy: "上传的文件只用于为你生成回答，不会用于其它途径。",
   langZh: "中文",
   langEn: "English",
   upload: "上传/拖入文件",

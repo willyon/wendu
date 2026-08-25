@@ -1,5 +1,6 @@
 from io import BytesIO, StringIO
 import csv
+import re
 from uuid import UUID
 
 from docx import Document
@@ -10,8 +11,8 @@ from sqlalchemy import delete, text
 from sqlalchemy.orm import Session
 
 from .config import settings
+from .embed import embed_passages
 from .errors import AppError
-from .llm import embed_texts
 from .models import Chunk, File
 from .storage import get_storage
 
@@ -109,10 +110,7 @@ def extract_text(filename: str, data: bytes) -> str:
     raise ValueError(f"unsupported type: {filename}")
 
 
-def chunk_text(raw: str) -> list[str]:
-    text_value = " ".join(raw.split())
-    if not text_value:
-        return []
+def _split_long_text(text_value: str) -> list[str]:
     size = settings.chunk_size
     overlap = settings.chunk_overlap
     chunks = []
@@ -122,6 +120,98 @@ def chunk_text(raw: str) -> list[str]:
         chunks.append(text_value[i : i + size])
         i += max(size - overlap, 1)
     return chunks
+
+
+def _chunk_markdown(raw: str) -> list[str]:
+    text = raw.replace("\r\n", "\n").replace("\r", "\n")
+    if not text.strip():
+        return []
+
+    size = settings.chunk_size
+    blocks: list[str] = []
+    current: list[str] = []
+    for line in text.split("\n"):
+        if re.match(r"^#{1,6}\s", line) and current:
+            blocks.append("\n".join(current).strip())
+            current = [line]
+        elif not line.strip() and current:
+            blocks.append("\n".join(current).strip())
+            current = []
+        else:
+            current.append(line)
+    if current:
+        blocks.append("\n".join(current).strip())
+
+    blocks = [b for b in blocks if b]
+    if not blocks:
+        return []
+
+    chunks: list[str] = []
+    buf = ""
+    for block in blocks:
+        if len(block) <= size:
+            if buf and len(buf) + 2 + len(block) <= size:
+                buf = f"{buf}\n\n{block}"
+            else:
+                if buf:
+                    chunks.append(buf)
+                buf = block
+        else:
+            if buf:
+                chunks.append(buf)
+                buf = ""
+            chunks.extend(_split_long_text(block))
+    if buf:
+        chunks.append(buf)
+    return chunks
+
+
+def _chunk_line_preserving(raw: str) -> list[str]:
+    """Keep line breaks (tables, CSV, spreadsheet rows)."""
+    text = raw.replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not text:
+        return []
+
+    size = settings.chunk_size
+    lines = [line.strip() for line in text.split("\n") if line.strip()]
+    if not lines:
+        return []
+
+    chunks: list[str] = []
+    buf = ""
+    for line in lines:
+        if len(line) > size:
+            if buf:
+                chunks.append(buf)
+                buf = ""
+            chunks.extend(_split_long_text(line))
+            continue
+        if buf and len(buf) + 1 + len(line) > size:
+            chunks.append(buf)
+            buf = line
+        else:
+            buf = f"{buf}\n{line}" if buf else line
+    if buf:
+        chunks.append(buf)
+    return chunks
+
+
+def chunk_text(raw: str, filename: str = "") -> list[str]:
+    lower = filename.lower()
+    if lower.endswith(".md") or lower.endswith(".markdown"):
+        pieces = _chunk_markdown(raw)
+        if pieces:
+            return pieces
+
+    if lower.endswith(".csv") or lower.endswith(".xlsx"):
+        pieces = _chunk_line_preserving(raw)
+        if pieces:
+            return pieces
+
+    text_value = " ".join(raw.split())
+    if not text_value:
+        return []
+    return _split_long_text(text_value)
 
 
 def ingest_file(db: Session, file_id: UUID) -> None:
@@ -136,13 +226,13 @@ def ingest_file(db: Session, file_id: UUID) -> None:
     try:
         data = storage.get_bytes(f.storage_key)
         raw = extract_text(f.filename, data)
-        pieces = chunk_text(raw)
+        pieces = chunk_text(raw, f.filename)
         if not pieces:
             f.status = "failed"
             f.fail_reason = "PARSE_FAILED"
             db.commit()
             return
-        vectors = embed_texts(pieces)
+        vectors = embed_passages(pieces)
         db.execute(delete(Chunk).where(Chunk.file_id == f.id))
         for i, (piece, vec) in enumerate(zip(pieces, vectors)):
             db.add(

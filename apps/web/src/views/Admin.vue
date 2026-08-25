@@ -94,32 +94,6 @@
                 :placeholder="t('adminChatModelPlaceholder')"
               />
             </label>
-            <label class="field">
-              <span class="field-name field-name--required">
-                {{ t('adminEmbedModel') }}
-                <FieldInfoHint :text="t('adminEmbedModelHint')" />
-              </span>
-              <input
-                v-model="settings.embedModel"
-                type="text"
-                spellcheck="false"
-                :placeholder="t('adminEmbedModelPlaceholder')"
-              />
-            </label>
-            <label class="field">
-              <span class="field-name field-name--required">
-                {{ t('adminEmbedDim') }}
-                <FieldInfoHint :text="t('adminEmbedDimHint')" />
-              </span>
-              <input
-                v-model="settings.embedDim"
-                type="text"
-                inputmode="numeric"
-                pattern="[0-9]*"
-                autocomplete="off"
-                :placeholder="t('adminEmbedDimPlaceholder')"
-              />
-            </label>
             <div class="section-foot">
               <button type="submit" class="cta" :disabled="loadingSettings">{{ t('adminSave') }}</button>
             </div>
@@ -294,9 +268,7 @@ const loadingDelete = ref(false)
 const settings = reactive({
   apiKey: '',
   baseUrl: '',
-  chatModel: '',
-  embedModel: '',
-  embedDim: 1024
+  chatModel: ''
 })
 const newUser = reactive({ email: '', password: '' })
 
@@ -305,8 +277,6 @@ async function load() {
   settings.apiKey = settingsData.openaiApiKey || ''
   settings.baseUrl = settingsData.openaiBaseUrl || ''
   settings.chatModel = settingsData.openaiChatModel || ''
-  settings.embedModel = settingsData.openaiEmbedModel || ''
-  settings.embedDim = settingsData.embedDim || 1024
   users.value = usersData.users || []
 }
 
@@ -352,9 +322,7 @@ async function saveSettings() {
   const apiKey = settings.apiKey.trim()
   const baseUrl = settings.baseUrl.trim()
   const chatModel = settings.chatModel.trim()
-  const embedModel = settings.embedModel.trim()
-  const embedDim = Number(settings.embedDim)
-  if (!apiKey || !baseUrl || !chatModel || !embedModel || !embedDim) {
+  if (!apiKey || !baseUrl || !chatModel) {
     toastError(t('adminModelIncomplete'))
     return
   }
@@ -364,9 +332,7 @@ async function saveSettings() {
     const data = await adminSaveSettings({
       openaiApiKey: apiKey,
       openaiBaseUrl: baseUrl,
-      openaiChatModel: chatModel,
-      openaiEmbedModel: embedModel,
-      embedDim
+      openaiChatModel: chatModel
     })
     await load()
     toastSuccess(data.message || t('adminSaved'))

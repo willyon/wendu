@@ -11,8 +11,9 @@ class Settings(BaseSettings):
     admin_user: str = "admin"
     admin_password: str = "admin"
 
-    # pgvector 列初始维度；与首次上传前在管理页设置的向量维度一致
-    default_embed_dim: int = 1024
+    # 内置本地 Embedding 维度（multilingual-e5-small）
+    default_embed_dim: int = 384
+    text_embedding_local_path: str = ""
     vector_min_score: float = 0.28
     vector_strong_score: float = 0.38
     chunk_size: int = 500

@@ -9,5 +9,8 @@ node_modules/
 apps/web/dist/
 apps/web/.e2e-out/
 apps/api/data/
+# 本地 Embedding 权重（必跑 scripts/fetch-embedding-model.py；不提交 GitHub）
+apps/api/models/multilingual-e5-small/
 *.egg-info/
 .pytest_cache/
+.dev/

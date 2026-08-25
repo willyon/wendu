@@ -7,16 +7,16 @@
     <div class="stage">
       <div class="split">
         <section class="brand-pane">
-          <h1>{{ t('brand') }}</h1>
-          <p class="lead">{{ t('tagline') }}</p>
-          <p class="privacy">{{ t('privacy') }}</p>
+          <h1>{{ t("brand") }}</h1>
+          <p class="lead">{{ t("tagline") }}</p>
+          <!-- <p class="privacy">{{ t('privacy') }}</p> -->
         </section>
 
         <section class="auth-pane">
-          <h2 class="mode-title">{{ t('login') }}</h2>
+          <h2 class="mode-title">{{ t("login") }}</h2>
           <form @submit.prevent="submit">
             <label>
-              <span>{{ t('username') }}</span>
+              <span>{{ t("username") }}</span>
               <input
                 ref="usernameEl"
                 v-model.trim="username"
@@ -25,10 +25,12 @@
                 :class="{ invalid: !!fieldErrors.username }"
                 @input="clearField('username')"
               />
-              <span v-if="fieldErrors.username" class="field-err">{{ t(fieldErrors.username) }}</span>
+              <span v-if="fieldErrors.username" class="field-err">{{
+                t(fieldErrors.username)
+              }}</span>
             </label>
             <label>
-              <span>{{ t('password') }}</span>
+              <span>{{ t("password") }}</span>
               <div class="pw">
                 <input
                   ref="passwordEl"
@@ -44,13 +46,25 @@
                   :aria-label="showPw ? t('hidePassword') : t('showPassword')"
                   @click="showPw = !showPw"
                 >
-                  <svg v-if="!showPw" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <svg
+                    v-if="!showPw"
+                    viewBox="0 0 24 24"
+                    width="18"
+                    height="18"
+                    aria-hidden="true"
+                  >
                     <path
                       fill="currentColor"
                       d="M12 5c-5 0-9.3 3.1-11 7 1.7 3.9 6 7 11 7s9.3-3.1 11-7c-1.7-3.9-6-7-11-7zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-2.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"
                     />
                   </svg>
-                  <svg v-else viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <svg
+                    v-else
+                    viewBox="0 0 24 24"
+                    width="18"
+                    height="18"
+                    aria-hidden="true"
+                  >
                     <path
                       fill="currentColor"
                       d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78 3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"
@@ -58,10 +72,12 @@
                   </svg>
                 </button>
               </div>
-              <span v-if="fieldErrors.password" class="field-err">{{ t(fieldErrors.password) }}</span>
+              <span v-if="fieldErrors.password" class="field-err">{{
+                t(fieldErrors.password)
+              }}</span>
             </label>
             <button type="submit" class="cta" :disabled="loading">
-              {{ t('login') }}
+              {{ t("login") }}
             </button>
           </form>
         </section>
@@ -71,75 +87,75 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
-import { login as loginApi } from '../http/api'
-import { apiMessage } from '../http/httpInstance'
-import { isLoginValid } from '../authFormRules'
-import { useAuth } from '../stores/auth'
-import { toastError } from '../composables/useToast'
-import { getRememberedUsername, rememberUsername } from '../loginRemember'
-import LangSwitch from '../components/LangSwitch.vue'
+import { onMounted, reactive, ref } from "vue";
+import { useI18n } from "vue-i18n";
+import { useRouter } from "vue-router";
+import { login as loginApi } from "../http/api";
+import { apiMessage } from "../http/httpInstance";
+import { isLoginValid } from "../authFormRules";
+import { useAuth } from "../stores/auth";
+import { toastError } from "../composables/useToast";
+import { getRememberedUsername, rememberUsername } from "../loginRemember";
+import LangSwitch from "../components/LangSwitch.vue";
 
-const { t } = useI18n()
-const router = useRouter()
-const auth = useAuth()
-const username = ref('')
-const password = ref('')
-const fieldErrors = reactive({ username: '', password: '' })
-const loading = ref(false)
-const showPw = ref(false)
-const usernameEl = ref(null)
-const passwordEl = ref(null)
+const { t } = useI18n();
+const router = useRouter();
+const auth = useAuth();
+const username = ref("");
+const password = ref("");
+const fieldErrors = reactive({ username: "", password: "" });
+const loading = ref(false);
+const showPw = ref(false);
+const usernameEl = ref(null);
+const passwordEl = ref(null);
 
 onMounted(() => {
-  const saved = getRememberedUsername()
+  const saved = getRememberedUsername();
   if (saved) {
-    username.value = saved
-    passwordEl.value?.focus()
+    username.value = saved;
+    passwordEl.value?.focus();
   } else {
-    usernameEl.value?.focus()
+    usernameEl.value?.focus();
   }
-})
+});
 
 function clearField(name) {
-  fieldErrors[name] = ''
+  fieldErrors[name] = "";
 }
 
 function localValidate() {
-  fieldErrors.username = ''
-  fieldErrors.password = ''
-  let ok = true
+  fieldErrors.username = "";
+  fieldErrors.password = "";
+  let ok = true;
   if (!username.value) {
-    fieldErrors.username = 'USERNAME_REQUIRED'
-    ok = false
+    fieldErrors.username = "USERNAME_REQUIRED";
+    ok = false;
   } else if (!isLoginValid(username.value)) {
-    fieldErrors.username = 'INVALID_LOGIN'
-    ok = false
+    fieldErrors.username = "INVALID_LOGIN";
+    ok = false;
   }
   if (!password.value) {
-    fieldErrors.password = 'PASSWORD_REQUIRED'
-    ok = false
+    fieldErrors.password = "PASSWORD_REQUIRED";
+    ok = false;
   }
-  return ok
+  return ok;
 }
 
 async function submit() {
-  if (!localValidate()) return
-  loading.value = true
+  if (!localValidate()) return;
+  loading.value = true;
   try {
     const data = await loginApi({
       email: username.value,
-      password: password.value
-    })
-    rememberUsername(username.value)
-    auth.user = data
-    router.push('/library')
+      password: password.value,
+    });
+    rememberUsername(username.value);
+    auth.user = data;
+    router.push("/library");
   } catch (e) {
-    toastError(apiMessage(e))
+    toastError(apiMessage(e));
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 </script>

@@ -2,6 +2,13 @@
 
 | 日期 | 改了什么 | 涉及文件 |
 |------|----------|----------|
+| 2026-08-25 | 移除 `instance_settings` embed 列；清理启动时 `ALTER TABLE` 迁移，表结构仍仅 `models.py` + `create_all` | models、bootstrap、04 |
+| 2026-08-25 | 代码落地：本地 Embedding（embed.py）、Chat 三项管理页、P1 检索/分块/概括问法、README | embed、llm、ingest、rag、Admin、README |
+| 2026-08-25 | 当前阶段：仅自托管；桌面标远期；本地 Embedding 默认；Chat 三项；好用 P0/P1 | 01–04、00 |
+| 2026-08-24 | 新增底层实现逻辑报告（上传/RAG/双模型/Markdown） | docs/implementation、00 |
+| 2026-08-24 | 桌面与自托管分叉：桌面无登录/管理/多用户，先 `/setup` 再工作台；`DEPLOYMENT_MODE`；共用 RAG | 01–04、00 |
+| 2026-08-24 | 产品边界：开源自托管 + 官方桌面安装包（同核）；明确不做 SaaS | 01–04、00 |
+| 2026-08-24 | 回答质量回归：多格式材料 + 事实问答/拒答用例（API） | 04、00、e2e-answer-quality |
 | 2026-08-23 | 移除问答停用词/字面关联拦截；是否可答仅依赖检索分数 + Prompt | 02、rag |
 | 2026-08-23 | 优化回答：无关问题走无依据、能力问短答、语言一致；阅读流去轮次横线 | 02、03、llm、rag、AskPanel |
 | 2026-08-23 | 问答检索向量化失败：降级关键词或无依据回复，不再弹 EMBED_FAILED Toast | 02、04、rag、useAskSession |

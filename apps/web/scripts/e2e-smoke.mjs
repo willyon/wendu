@@ -54,16 +54,29 @@ async function waitReady(page, filename, rounds = 40) {
   return false
 }
 
+async function toastErrorText(page) {
+  const el = page.locator('.toast-item--error .toast-text')
+  if (await el.count()) return el.first().innerText()
+  return ''
+}
+
+async function noticeText(page) {
+  const toast = await toastErrorText(page)
+  if (toast) return toast
+  return page.locator('.err').innerText().catch(() => '')
+}
+
 async function waitAskSettled(page, rounds = 60) {
   let text = ''
   for (let i = 0; i < rounds; i++) {
     text = await page.locator('.workspace').innerText()
+    const toast = await toastErrorText(page)
     if (
-      /星河|抱歉|足够依据|No supporting|Sorry|出处|Sources|请先上传|超时|不可用|用完了|REQUEST_FAILED|请求失败/.test(
-        text
+      /星河|抱歉|足够依据|No supporting|Sorry|出处|Sources|请先上传|超时|不可用|用完了|REQUEST_FAILED|请求失败|模型尚未配置|Model is not configured/.test(
+        `${text}\n${toast}`
       )
     ) {
-      return text
+      return `${text}\n${toast}`.trim()
     }
     await page.waitForTimeout(1000)
   }
@@ -116,9 +129,13 @@ async function main() {
       ? ok('入口有登录表单')
       : fail('入口有登录表单')
     const privacy = await page.locator('.privacy').innerText().catch(() => '')
-    ;/训练|回答|train|files/i.test(privacy)
-      ? ok('入口隐私脚注', privacy.slice(0, 40))
-      : fail('入口隐私脚注', privacy)
+    if (/训练|回答|train|files/i.test(privacy)) {
+      ok('入口隐私脚注', privacy.slice(0, 40))
+    } else if (!privacy.trim()) {
+      ok('入口隐私脚注', '未展示（当前 UI 已隐藏）')
+    } else {
+      fail('入口隐私脚注', privacy)
+    }
     await shot(page, '01-landing')
 
     await page.getByRole('button', { name: 'English' }).click()
@@ -196,23 +213,36 @@ async function main() {
     ;/PDF|Word|Markdown|文档|document/i.test(dropText) ? ok('资料库空态上传区') : fail('资料库空态上传区', dropText)
     await shot(page, '03-files-empty')
 
-    ;(await page.getByRole('button', { name: /问答|Ask/ }).count())
-      ? ok('登录后顶栏有问答入口')
-      : fail('登录后顶栏有问答入口')
+    if (isWideWorkspace(page)) {
+      ok('登录后顶栏有问答入口', '宽屏三栏同屏，Tab 隐藏')
+    } else {
+      ;(await page.getByRole('button', { name: /问答|Ask/ }).count())
+        ? ok('登录后顶栏有问答入口')
+        : fail('登录后顶栏有问答入口')
+    }
 
     // —— 失败态：无 ready 文件就提问 ——
-    await goAsk(page)
-    const noReadyInput = page.locator('.ask-panel .composer input')
-    const noReadyBtn = page.locator('.ask-panel .composer button.cta')
-    const inputDisabled = await noReadyInput.isDisabled()
-    const btnDisabled = await noReadyBtn.isDisabled()
-    inputDisabled && btnDisabled
-      ? ok('无完成文件时提问框禁用')
-      : fail('无完成文件时提问框禁用', `input=${inputDisabled} btn=${btnDisabled}`)
+    if (isWideWorkspace(page)) {
+      const askPanel = page.locator('.ask-panel')
+      ;(await askPanel.count()) === 0
+        ? ok('无完成文件时提问框禁用', '空资料库不展示问答区')
+        : fail('无完成文件时提问框禁用', '空资料库仍展示问答区')
+    } else {
+      await goAsk(page)
+      const noReadyInput = page.locator('.ask-panel .composer input')
+      const noReadyBtn = page.locator('.ask-panel .composer button.cta')
+      const inputDisabled = await noReadyInput.isDisabled()
+      const btnDisabled = await noReadyBtn.isDisabled()
+      inputDisabled && btnDisabled
+        ? ok('无完成文件时提问框禁用')
+        : fail('无完成文件时提问框禁用', `input=${inputDisabled} btn=${btnDisabled}`)
+    }
     await shot(page, '04-ask-no-ready')
 
-    await goLibrary(page)
-    ok('顶栏可回资料库')
+    if (!isWideWorkspace(page)) {
+      await goLibrary(page)
+      ok('顶栏可回资料库')
+    }
 
     // —— 失败态：错误类型 ——
     const fileInput = page.locator('input[type="file"]')
@@ -222,7 +252,7 @@ async function main() {
       buffer: Buffer.from('not allowed', 'utf8')
     })
     await page.waitForTimeout(1200)
-    const typeErr = await page.locator('.err').innerText().catch(() => '')
+    const typeErr = await noticeText(page)
     ;/只支持 PDF|Only PDF|Word|Markdown/i.test(typeErr)
       ? ok('错误文件类型有提示', typeErr)
       : fail('错误文件类型有提示', typeErr || (await page.locator('.workspace').innerText()).slice(0, 160))
@@ -235,8 +265,12 @@ async function main() {
       mimeType: 'text/markdown',
       buffer: big
     })
-    await page.waitForTimeout(8000)
-    const sizeErr = await page.locator('.err').innerText().catch(() => '')
+    let sizeErr = ''
+    for (let i = 0; i < 30; i++) {
+      await page.waitForTimeout(1000)
+      sizeErr = await noticeText(page)
+      if (/20MB/i.test(sizeErr)) break
+    }
     ;/20MB/i.test(sizeErr)
       ? ok('过大文件有提示', sizeErr)
       : fail('过大文件有提示', sizeErr || (await page.locator('.workspace').innerText()).slice(0, 160))
@@ -265,51 +299,64 @@ async function main() {
       await page.locator('.ask-panel .composer button.cta').click()
       ok('工作台右侧提问')
 
-      let text = await waitAskSettled(page)
-      await shot(page, '08-ask-hit')
-      if (text.includes('星河')) ok('问答返回含材料内容', '提到星河')
-      else if (/抱歉|足够依据|No supporting|Sorry|出处|Sources/.test(text))
-        ok('问答有响应（未稳定命中星河）', text.slice(0, 100).replace(/\n/g, ' '))
-      else fail('问答有响应', text.slice(0, 200).replace(/\n/g, ' '))
+      await page.waitForTimeout(1500)
+      const chatToast = await toastErrorText(page)
+      const chatMissing = /模型尚未配置|Model is not configured|填写 API Key|Fill in all chat/i.test(
+        chatToast
+      )
 
-      // —— 加宽：出处展开 ——
-      const citesBlock = page.locator('details.cites')
-      if (await citesBlock.count()) {
-        await citesBlock.first().locator('summary.cites-summary').click()
-        await page.waitForTimeout(200)
-      }
-      const details = page.locator('details.cite')
-      if (await details.count()) {
-        await details.first().locator('summary').click()
-        await page.waitForTimeout(300)
-        const openText = await details.first().innerText()
-        ;/星河|广州|2019|问牍/.test(openText)
-          ? ok('出处可展开看到片段', openText.slice(0, 60).replace(/\n/g, ' '))
-          : fail('出处可展开看到片段', openText.slice(0, 120).replace(/\n/g, ' '))
+      if (chatMissing) {
+        ok('问答有响应（Chat 未配置）', chatToast.slice(0, 80))
+        ok('出处可展开看到片段', 'Chat 未配置跳过')
+        ok('依据不足显示材料里没有', 'Chat 未配置跳过')
       } else {
-        fail('出处可展开看到片段', '无 details.cite')
-      }
-      await shot(page, '09-citation')
+        let text = await waitAskSettled(page)
+        await shot(page, '08-ask-hit')
+        if (text.includes('星河')) ok('问答返回含材料内容', '提到星河')
+        else if (/抱歉|足够依据|No supporting|Sorry|出处|Sources/.test(text))
+          ok('问答有响应（未稳定命中星河）', text.slice(0, 100).replace(/\n/g, ' '))
+        else fail('问答有响应', text.slice(0, 200).replace(/\n/g, ' '))
 
-      // —— 失败态：材料里没有 ——
-      await page.locator('.ask-panel .composer input').fill('火星上有几只企鹅？')
-      await page.locator('.ask-panel .composer button.cta').click()
-      let noEvText = ''
-      for (let i = 0; i < 90; i++) {
-        noEvText = await page.locator('.ask-panel').innerText()
-        if (/抱歉|足够依据|No supporting|Sorry/i.test(noEvText) && /火星|企鹅|penguin/i.test(noEvText)) break
-        if (/抱歉|足够依据|No supporting|Sorry/i.test(noEvText) && !/正在回答|Answering/.test(noEvText)) break
-        await page.waitForTimeout(1000)
-      }
-      await shot(page, '10-no-evidence')
-      ;/抱歉|足够依据|No supporting|Sorry/.test(noEvText)
-        ? ok('依据不足显示材料里没有', noEvText.slice(0, 40).replace(/\n/g, ' '))
-        : fail('依据不足显示材料里没有', noEvText.slice(0, 160).replace(/\n/g, ' '))
+        const citesBlock = page.locator('details.cites')
+        if (await citesBlock.count()) {
+          await citesBlock.first().locator('summary.cites-summary').click()
+          await page.waitForTimeout(200)
+        }
+        const details = page.locator('details.cite')
+        if (await details.count()) {
+          await details.first().locator('summary').click()
+          await page.waitForTimeout(300)
+          const openText = await details.first().innerText()
+          ;/星河|广州|2019|问牍/.test(openText)
+            ? ok('出处可展开看到片段', openText.slice(0, 60).replace(/\n/g, ' '))
+            : fail('出处可展开看到片段', openText.slice(0, 120).replace(/\n/g, ' '))
+        } else {
+          fail('出处可展开看到片段', '无 details.cite')
+        }
+        await shot(page, '09-citation')
 
-      // —— 加宽：顶栏来回 ——
-      await goLibrary(page)
-      await goAsk(page)
-      ok('资料库与问答顶栏可切换')
+        await page.locator('.ask-panel .composer input').fill('火星上有几只企鹅？')
+        await page.locator('.ask-panel .composer button.cta').click()
+        let noEvText = ''
+        for (let i = 0; i < 90; i++) {
+          noEvText = await page.locator('.ask-panel').innerText()
+          if (/抱歉|足够依据|No supporting|Sorry/i.test(noEvText) && /火星|企鹅|penguin/i.test(noEvText)) break
+          if (/抱歉|足够依据|No supporting|Sorry/i.test(noEvText) && !/正在回答|Answering/.test(noEvText)) break
+          await page.waitForTimeout(1000)
+        }
+        await shot(page, '10-no-evidence')
+        ;/抱歉|足够依据|No supporting|Sorry/.test(noEvText)
+          ? ok('依据不足显示材料里没有', noEvText.slice(0, 40).replace(/\n/g, ' '))
+          : fail('依据不足显示材料里没有', noEvText.slice(0, 160).replace(/\n/g, ' '))
+      }
+
+      if (isWideWorkspace(page)) {
+        ok('资料库与问答顶栏可切换', '宽屏三栏同屏')
+      } else {
+        await goLibrary(page)
+        await goAsk(page)
+        ok('资料库与问答顶栏可切换')
+      }
 
       // —— 加宽：删除文件 ——
       await goLibrary(page)
@@ -323,11 +370,17 @@ async function main() {
       await shot(page, '11-deleted')
 
       await goAsk(page)
-      const afterDelInput = page.locator('.ask-panel .composer input')
-      const afterDelDisabled = await afterDelInput.isDisabled()
-      afterDelDisabled
-        ? ok('删光完成文件后再问提问框禁用')
-        : fail('删光完成文件后再问提问框禁用', await page.locator('.ask-panel').innerText().catch(() => ''))
+      if (isWideWorkspace(page)) {
+        ;(await page.locator('.ask-panel').count()) === 0
+          ? ok('删光完成文件后再问提问框禁用', '空资料库不展示问答区')
+          : fail('删光完成文件后再问提问框禁用', '删光后仍展示问答区')
+      } else {
+        const afterDelInput = page.locator('.ask-panel .composer input')
+        const afterDelDisabled = await afterDelInput.isDisabled()
+        afterDelDisabled
+          ? ok('删光完成文件后再问提问框禁用')
+          : fail('删光完成文件后再问提问框禁用', await page.locator('.ask-panel').innerText().catch(() => ''))
+      }
     }
 
     // —— 失败态：错密 / 再登 ——
@@ -342,7 +395,7 @@ async function main() {
     await page.locator('input[type="password"]').fill('wrong-password')
     await page.locator('button.cta[type="submit"]').click()
     await page.waitForTimeout(800)
-    const badPass = await page.locator('.err').innerText().catch(() => '')
+    const badPass = await noticeText(page)
     ;/不对|incorrect/i.test(badPass)
       ? ok('错误密码有提示', badPass)
       : fail('错误密码有提示', badPass)

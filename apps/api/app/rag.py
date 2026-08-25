@@ -8,17 +8,22 @@ from sqlalchemy.orm import Session
 
 from .config import settings
 from .conversations import get_conversation, touch_conversation
+from .embed import embed_query
 from .errors import AppError
 from .i18n import t
-from .llm import citations_from_answer, embed_query, is_no_evidence_reply, stream_answer
+from .llm import citations_from_answer, is_no_evidence_reply, stream_answer
 from .models import Citation, Conversation, File, Message
 
 _CAPABILITY_PATTERNS = (
     r"你能?(做什么|回答什么|帮我什么|帮什么|查什么|说.*什么|提供什么)",
     r"你可以(做什么|回答什么|帮我什么)",
     r"能回答(什么|哪些)(问题)?",
+    r"(总结|概括|归纳).*(材料|文档|文件|上传|内容|主题)",
+    r"(材料|文档|文件|上传).*(主题|内容|讲什么|说什么|关于什么|涵盖)",
     r"what can you (do|answer|help with)",
     r"what (questions|topics) can you answer",
+    r"summarize (the )?(uploaded )?(materials|documents|files|content)",
+    r"what (topics|themes) (do|are) (the )?(materials|documents|files)",
 )
 
 
@@ -53,6 +58,108 @@ def _resolve_file_ids(db: Session, user_id: UUID, file_ids: list[str] | None) ->
     return unique
 
 
+def _ready_file_ids(db: Session, user_id: UUID, file_ids: list[UUID] | None) -> list[str]:
+    stmt = select(File.id).where(File.user_id == user_id, File.status == "ready")
+    if file_ids:
+        stmt = stmt.where(File.id.in_(file_ids))
+    return [str(x) for x in db.execute(stmt).scalars().all()]
+
+
+def _best_chunk_for_file(
+    db: Session,
+    user_id: UUID,
+    file_id: str,
+    qvec: list[float] | None,
+    question: str,
+) -> dict | None:
+    params: dict = {"uid": user_id, "fid": file_id, "q": question}
+    if qvec is not None:
+        params["qvec"] = "[" + ",".join(str(x) for x in qvec) + "]"
+        row = db.execute(
+            text(
+                """
+                SELECT c.id, c.file_id, c.text, f.filename,
+                       (1 - (c.embedding <=> CAST(:qvec AS vector))) AS vec_score
+                FROM chunks c
+                JOIN files f ON f.id = c.file_id
+                WHERE c.user_id = :uid
+                  AND c.file_id = CAST(:fid AS uuid)
+                  AND f.status = 'ready'
+                  AND c.embedding IS NOT NULL
+                ORDER BY c.embedding <=> CAST(:qvec AS vector)
+                LIMIT 1
+                """
+            ),
+            params,
+        ).mappings().first()
+        if row:
+            return {
+                "id": str(row["id"]),
+                "file_id": str(row["file_id"]),
+                "filename": row["filename"],
+                "text": row["text"],
+                "score": float(row["vec_score"]),
+                "keyword_hit": False,
+            }
+
+    row = db.execute(
+        text(
+            """
+            SELECT c.id, c.file_id, c.text, f.filename
+            FROM chunks c
+            JOIN files f ON f.id = c.file_id
+            WHERE c.user_id = :uid
+              AND c.file_id = CAST(:fid AS uuid)
+              AND f.status = 'ready'
+              AND c.tsv @@ plainto_tsquery('simple', :q)
+            LIMIT 1
+            """
+        ),
+        params,
+    ).mappings().first()
+    if not row:
+        return None
+    return {
+        "id": str(row["id"]),
+        "file_id": str(row["file_id"]),
+        "filename": row["filename"],
+        "text": row["text"],
+        "score": settings.vector_min_score,
+        "keyword_hit": True,
+    }
+
+
+def _ensure_per_file_coverage(
+    db: Session,
+    user_id: UUID,
+    question: str,
+    passages: list[dict],
+    file_ids: list[UUID] | None,
+    qvec: list[float] | None,
+) -> list[dict]:
+    k = settings.retrieve_k
+    target_files = _ready_file_ids(db, user_id, file_ids)
+    if len(target_files) <= 1 or len(target_files) > k:
+        return passages[:k]
+
+    result = passages[:k]
+    represented = {p["file_id"] for p in result}
+    missing = [fid for fid in target_files if fid not in represented]
+    if not missing:
+        return result
+
+    for fid in missing:
+        extra = _best_chunk_for_file(db, user_id, fid, qvec, question)
+        if not extra or extra["id"] in {p["id"] for p in result}:
+            continue
+        if len(result) >= k:
+            result = sorted(result, key=lambda x: x["score"], reverse=True)
+            result.pop()
+        result.append(extra)
+
+    return sorted(result, key=lambda x: x["score"], reverse=True)[:k]
+
+
 def retrieve(db: Session, user_id: UUID, question: str, file_ids: list[UUID] | None = None) -> list[dict]:
     """向量 top-k 与关键词命中合并后按分数取前 k；向量化失败时降级为仅关键词。"""
     k = settings.retrieve_k
@@ -63,6 +170,7 @@ def retrieve(db: Session, user_id: UUID, question: str, file_ids: list[UUID] | N
         params["file_ids"] = [str(x) for x in file_ids]
 
     vec_rows = []
+    qvec = None
     try:
         qvec = embed_query(question)
         vec_literal = "[" + ",".join(str(x) for x in qvec) + "]"
@@ -84,7 +192,7 @@ def retrieve(db: Session, user_id: UUID, question: str, file_ids: list[UUID] | N
             vec_stmt = vec_stmt.bindparams(bindparam("file_ids", expanding=True))
         vec_rows = db.execute(vec_stmt, params).mappings().all()
     except AppError as exc:
-        if exc.code != "EMBED_FAILED":
+        if exc.code not in ("EMBED_FAILED", "EMBED_MODEL_MISSING"):
             raise
 
     kw_sql = f"""
@@ -129,7 +237,7 @@ def retrieve(db: Session, user_id: UUID, question: str, file_ids: list[UUID] | N
             }
 
     scored = sorted(by_id.values(), key=lambda x: x["score"], reverse=True)
-    return scored[:k]
+    return _ensure_per_file_coverage(db, user_id, question, scored, file_ids, qvec)
 
 
 def _passages_sufficient(passages: list[dict]) -> bool:
@@ -239,7 +347,7 @@ def ask_stream(
         try:
             passages = retrieve(db, user_id, question, scoped)
         except AppError as exc:
-            if exc.code in ("EMBED_FAILED", "PARSE_FAILED"):
+            if exc.code in ("EMBED_FAILED", "EMBED_MODEL_MISSING", "PARSE_FAILED"):
                 yield from _yield_no_evidence(db, user_id, conversation_id, conv)
                 return
             raise

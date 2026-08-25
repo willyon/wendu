@@ -4,7 +4,6 @@ from collections.abc import Iterator
 
 import httpx
 
-from .config import settings
 from .db import SessionLocal
 from .errors import AppError
 from .models import InstanceSettings
@@ -23,7 +22,7 @@ def is_no_evidence_reply(text: str) -> bool:
     return False
 
 
-def _llm_config() -> dict:
+def _chat_config() -> dict:
     db = SessionLocal()
     try:
         row = db.get(InstanceSettings, 1)
@@ -33,60 +32,20 @@ def _llm_config() -> dict:
             "api_key": (row.openai_api_key or "").strip(),
             "base_url": (row.openai_base_url or "").strip(),
             "chat_model": (row.openai_chat_model or "").strip(),
-            "embed_model": (row.openai_embed_model or "").strip(),
-            "embed_dim": row.embed_dim or 1024,
         }
     finally:
         db.close()
-    if not all(cfg[k] for k in ("api_key", "base_url", "chat_model", "embed_model")):
-        raise AppError("LLM_NOT_CONFIGURED", 503)
-    if not cfg["embed_dim"] or cfg["embed_dim"] < 1:
+    if not all(cfg[k] for k in ("api_key", "base_url", "chat_model")):
         raise AppError("LLM_NOT_CONFIGURED", 503)
     return cfg
 
 
 def _headers() -> dict:
-    cfg = _llm_config()
+    cfg = _chat_config()
     return {
         "Authorization": f"Bearer {cfg['api_key']}",
         "Content-Type": "application/json",
     }
-
-
-def embed_texts(texts: list[str]) -> list[list[float]]:
-    if not texts:
-        return []
-    cfg = _llm_config()
-    url = cfg["base_url"].rstrip("/") + "/embeddings"
-    # 百炼等兼容接口常见上限 10；分批以免长文档切片超限
-    batch_size = 10
-    out: list[list[float]] = []
-    try:
-        with httpx.Client(timeout=60) as client:
-            for i in range(0, len(texts), batch_size):
-                batch = texts[i : i + batch_size]
-                r = client.post(
-                    url,
-                    headers=_headers(),
-                    json={
-                        "model": cfg["embed_model"],
-                        "input": batch,
-                        "dimensions": cfg["embed_dim"],
-                    },
-                )
-                r.raise_for_status()
-                data = r.json()["data"]
-                data.sort(key=lambda x: x["index"])
-                out.extend(item["embedding"] for item in data)
-        return out
-    except AppError:
-        raise
-    except Exception as exc:
-        raise AppError("EMBED_FAILED", 502) from exc
-
-
-def embed_query(text: str) -> list[float]:
-    return embed_texts([text])[0]
 
 
 def _answer_prompt(question: str, passages: list[dict], *, capability: bool = False) -> tuple[str, str]:
@@ -94,9 +53,11 @@ def _answer_prompt(question: str, passages: list[dict], *, capability: bool = Fa
     for i, p in enumerate(passages, start=1):
         numbered.append(f"[{i}] file={p['filename']}\n{p['text']}")
     capability_rules = (
-        "The user asks what you can answer or what the uploaded materials cover. "
+        "The user asks what you can answer, what topics the uploaded materials cover, "
+        "or wants a brief summary of the retrieved passages. "
         "Reply in 2–4 short sentences summarizing the main topics only; "
-        "do not enumerate every passage, do not list more than four bullet points, "
+        "say clearly that your summary is based only on the passages below, not every uploaded file. "
+        "Do not enumerate every passage, do not list more than four bullet points, "
         "and do not repeat the question.\n"
         if capability
         else ""
@@ -111,6 +72,9 @@ def _answer_prompt(question: str, passages: list[dict], *, capability: bool = Fa
         "If the question is unrelated to the passage content, or the passages do not substantively "
         f"answer it, reply with exactly {NO_EVIDENCE_SENTINEL} and nothing else.\n"
         "When you do answer, cite passages with [1], [2], etc.\n"
+        "Copy numbers, codes, IDs, paths, and proper nouns exactly as they appear in the cited passage; "
+        "do not round, paraphrase, or guess digits.\n"
+        "For table or list rows, use the value from the same row as the item named in the question.\n"
         "Write clear prose. Light Markdown is OK (bold, lists, inline code). "
         "Do not use JSON or fenced code blocks."
     )
@@ -125,7 +89,7 @@ def _answer_prompt(question: str, passages: list[dict], *, capability: bool = Fa
 
 def stream_answer(question: str, passages: list[dict], *, capability: bool = False) -> Iterator[str]:
     """Yield answer text deltas from OpenAI-compatible chat completions stream."""
-    cfg = _llm_config()
+    cfg = _chat_config()
     system, user = _answer_prompt(question, passages, capability=capability)
     url = cfg["base_url"].rstrip("/") + "/chat/completions"
     try:
