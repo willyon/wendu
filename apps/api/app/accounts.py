@@ -1,4 +1,4 @@
-"""登录名与密码规则（自托管，非公网 SaaS 强度）。"""
+"""Login-name and password rules (self-host; not public SaaS strength)."""
 
 import re
 

@@ -1,3 +1,8 @@
+<!--
+  Library sidebar: pick/drop upload, list status polling, delete.
+  Upload flow: hash → prepare → PUT storage → complete → poll ready/failed.
+  Does not own: ask panel (AskPanel), conversation list (ConversationSidebar).
+-->
 <template>
   <aside class="file-sidebar" :class="{ 'file-sidebar--empty': isEmpty }">
     <button

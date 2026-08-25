@@ -1,3 +1,8 @@
+"""Env settings (pydantic-settings): retrieve thresholds, chunking, FILES_DIR, etc.
+
+Chat API keys live in DB instance_settings, not here. Embed dim: embed.EMBED_DIM.
+"""
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 

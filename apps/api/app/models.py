@@ -1,3 +1,10 @@
+"""SQLAlchemy models (no Alembic; schema = this file + create_all).
+
+Tables: users · instance_settings (Chat triple) · files · chunks ·
+conversations · messages · citations.
+Vector dim comes from embed.EMBED_DIM only — do not add a second dim source.
+"""
+
 import uuid
 from datetime import datetime, timezone
 from typing import Optional

@@ -1,3 +1,12 @@
+"""RAG retrieve + ask path.
+
+Owns: vector+FTS retrieval (top-K), evidence gates, capability/summary question
+detection, SSE answers, citation persistence.
+Does not own: ingest/parsing (ingest.py), embedding inference (embed.py), Chat HTTP (llm.py).
+Entry points: retrieve() · ask_stream() · history()
+See: docs/implementation (ZH) §5; docs/spec/02 product design — Q&A bounds.
+"""
+
 import json
 import re
 from collections.abc import Iterator

@@ -1,3 +1,9 @@
+"""Wendu FastAPI entry: schema bootstrap, seed admin, preload embed, mount routers.
+
+Startup: init_db() (vector ext + create_all + bootstrap) → preload_model()
+Routers: /api/auth · /admin · /files · /ask (and storage)
+"""
+
 from fastapi import FastAPI, Request
 from sqlalchemy import text
 

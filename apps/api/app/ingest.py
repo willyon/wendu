@@ -1,3 +1,12 @@
+"""Ingest: read file → extract text → chunk → local embed → write chunks.
+
+Owns: per-format extract, chunking (Markdown / line-preserving tables), embed_passages,
+files.status updates.
+Does not own: upload auth / signed PUT (routers_files, storage), ask-time retrieve (rag).
+Entry points: ingest_file(file_id) · chunk_text()
+See: docs/implementation (ZH) §3–4.
+"""
+
 from io import BytesIO, StringIO
 import csv
 import re

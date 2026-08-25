@@ -1,4 +1,4 @@
-"""请求语言上下文（X-Accept-Language / Accept-Language）。"""
+"""Request language context (X-Accept-Language / Accept-Language)."""
 
 from __future__ import annotations
 

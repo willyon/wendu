@@ -1,4 +1,4 @@
-"""后端接口人话（按语言）；稳定键为 code。"""
+"""API user-facing messages by language; stable keys are error codes."""
 
 from __future__ import annotations
 

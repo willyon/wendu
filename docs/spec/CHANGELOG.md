@@ -2,6 +2,9 @@
 
 | 日期 | 改了什么 | 涉及文件 |
 |------|----------|----------|
+| 2026-08-25 | 双语文档：README/CONTRIBUTING 中英；docs 英文总览；代码模块头统一英文 | README*.md、CONTRIBUTING*.md、docs/README*.md、app 模块头 |
+| 2026-08-25 | 核心模块文件头导读 + CONTRIBUTING「改代码从哪读起」 | rag/ingest/llm/…、CONTRIBUTING |
+| 2026-08-25 | 开源门面：MIT LICENSE、CONTRIBUTING、README 能力边界/仓库地图/生产安全 | LICENSE、CONTRIBUTING、README |
 | 2026-08-25 | code-slim：删死配置/配额表/死 i18n；维度单源 `embed.EMBED_DIM`；规格去掉 Admin Embedding 只读说明；能力问明确仅 Prompt；删 multi-doc e2e | models、config、Admin locales、02–04、implementation |
 | 2026-08-25 | 移除 `instance_settings` embed 列；清理启动时 `ALTER TABLE` 迁移，表结构仍仅 `models.py` + `create_all` | models、bootstrap、04 |
 | 2026-08-25 | 代码落地：本地 Embedding（embed.py）、Chat 三项管理页、P1 检索/分块/概括问法、README | embed、llm、ingest、rag、Admin、README |

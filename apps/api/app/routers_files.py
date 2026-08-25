@@ -1,3 +1,10 @@
+"""Library HTTP: prepare → signed PUT → complete → background ingest; list/delete.
+
+Owns: dedupe, ext/size checks, storage URL credentials, schedule ingest_file.
+Does not own: parse/chunk/embed details (ingest), disk I/O impl (storage).
+Prefixes: /api/files · /api/storage
+"""
+
 from typing import Optional
 from uuid import UUID
 

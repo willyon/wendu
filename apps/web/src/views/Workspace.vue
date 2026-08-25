@@ -1,3 +1,7 @@
+<!--
+  Workspace shell: wide three columns (chats | ask | library) / narrow tabs.
+  Composes ConversationSidebar, AskPanel, FileSidebar; page-level drop upload.
+-->
 <template>
   <div
     class="workspace"

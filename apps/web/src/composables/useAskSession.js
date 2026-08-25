@@ -1,3 +1,9 @@
+/**
+ * Ask-session state: conversation list, active thread, SSE ask/stop, draft restore.
+ * Entry: useAskSession() → submit / stop / selectConversation
+ * HTTP: ../http/api (askQuestionStream, etc.)
+ * Does not own: uploads (FileSidebar), Markdown render (AskPanel / renderAnswerMd)
+ */
 import { computed, ref } from 'vue'
 import {
   askQuestionStream,

@@ -1,3 +1,10 @@
+"""Ask + conversation HTTP: SSE ask, conversation CRUD, message history.
+
+Owns: delegate to rag.ask_stream / history; list/create/rename/delete conversations.
+Does not own: retrieval or prompts (rag / llm).
+Prefixes: /api/ask · /api/conversations
+"""
+
 from typing import Optional
 from uuid import UUID
 

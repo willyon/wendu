@@ -1,3 +1,10 @@
+"""Admin HTTP: Chat settings triple, user create/reset/delete.
+
+Owns: instance_settings read/write, admin-gated account ops.
+Does not own: Embedding settings (fixed locally; no admin fields).
+Prefix: /api/admin
+"""
+
 from uuid import UUID
 
 from fastapi import APIRouter, Depends

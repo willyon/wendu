@@ -1,3 +1,12 @@
+"""Cloud Chat: build prompts, stream OpenAI-compatible completions, parse citations.
+
+Owns: instance_settings chat triple, capability short-answer rules, stream_answer,
+citations_from_answer.
+Does not own: passage selection (rag), local vectors (embed).
+Sentinel: model must reply with exactly __NO_EVIDENCE__ when refusing (NO_EVIDENCE_SENTINEL).
+See: docs/implementation (ZH) §6; docs/spec/02 — Q&A bounds.
+"""
+
 import json
 import re
 from collections.abc import Iterator

@@ -1,20 +1,55 @@
-# 问牍
+# Wendu（问牍）
 
-导入文档，对着你的材料提问，答案带出处。当前阶段为**开源自托管 Web**：Embedding 内置本地模型，Chat 由你在管理页配置。
+**English** | [中文](README.zh.md)
 
-## 快速开始（本机开发）
+Upload your documents, ask questions grounded in those files, and get answers with citations. Current release: **open-source self-hosted Web** — local Embedding built in; configure **Chat** in Admin.
 
-### 1. 依赖
+## Capability bounds (read first)
+
+- Each question retrieves at most about **8** chunks into the chat model. We **do not** promise a full summary of every uploaded file or an entire long document in one answer.
+- Capability / “what is this about” questions get a **short** reply and must state that the summary is based only on retrieved passages.
+- If evidence is missing, the app refuses — it will not invent facts from world knowledge.
+- Embedding is **not** configured in Admin; you only set **Chat** (API key, base URL, chat model).
+
+Details (Chinese spec): [`docs/spec/02-产品设计.md`](docs/spec/02-产品设计.md). English overview: [`docs/README.md`](docs/README.md).
+
+## Production security
+
+- Default admin is `admin` / `admin` — **change the password immediately** and rotate `SESSION_SECRET`.
+- Never commit `.env`, API keys, or real passwords (`.gitignore` already ignores `apps/api/.env`).
+- Behind HTTPS, set `COOKIE_SECURE=true`.
+
+## Repository map
+
+```text
+apps/api/app/              FastAPI: upload, retrieve, ask, admin
+  embed.py / ingest.py / rag.py / llm.py
+apps/api/models/           Local embedding weights (gitignored; download via script)
+apps/web/src/              Vue workspace + admin UI
+docs/spec/                 Product & tech specs (Chinese source of truth)
+docs/implementation/       End-to-end pipeline notes (Chinese)
+docs/README.md             English docs hub
+scripts/                   Local start/stop helpers
+apps/web/scripts/          e2e smoke + answer-quality suites
+```
+
+Change product behavior → `docs/spec/` (and mirror intent in English docs when you touch user-facing promises).  
+How the pipeline works → `docs/implementation/` (ZH) + module headers in code (EN).  
+Contributing → [CONTRIBUTING.md](CONTRIBUTING.md) · [中文](CONTRIBUTING.zh.md).
+
+## Quick start (local)
+
+### 1. Dependencies
 
 - PostgreSQL 16 + [pgvector](https://github.com/pgvector/pgvector)
 - Python 3.12+
 - Node.js 20+
 
-### 2. 数据库
+### 2. Database
 
 ```bash
 createdb wendu
-# 确保已安装 pgvector 扩展（API 启动时会 CREATE EXTENSION）
+# Ensure pgvector is available (API runs CREATE EXTENSION on startup)
 ```
 
 ### 3. API
@@ -25,12 +60,12 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-# 必做：下载 Embedding 模型到 models/（约 500MB，已 gitignore，不提交 GitHub）
+# Required: download embedding weights into models/ (~500MB, gitignored)
 python scripts/fetch-embedding-model.py
 python start.py
 ```
 
-模型权重在 `apps/api/models/multilingual-e5-small/`。换机器或新 clone 后需再跑一次 `fetch-embedding-model.py`。自定义目录可设 `TEXT_EMBEDDING_LOCAL_PATH`。
+Weights live under `apps/api/models/multilingual-e5-small/`. After a fresh clone, run `fetch-embedding-model.py` again. Override with `TEXT_EMBEDDING_LOCAL_PATH` if needed.
 
 ### 4. Web
 
@@ -40,64 +75,64 @@ npm install
 npm run dev
 ```
 
-浏览器打开 http://localhost:5173
+Open http://localhost:5173
 
-### 5. 首次使用
+### 5. First use
 
-1. 默认管理员：`admin` / `admin`（见 `apps/api/.env` 的 `ADMIN_USER` / `ADMIN_PASSWORD`）
-2. 登录后进入 **管理 → 模型**，填写 **Chat 三项**：API Key、Base URL、对话模型
-3. 回到工作台上传 PDF / Word / Markdown 等，等待「完成」后提问
+1. Default admin: `admin` / `admin` (`ADMIN_USER` / `ADMIN_PASSWORD` in `apps/api/.env`)
+2. **Admin → Model**: fill Chat **API Key**, **Base URL**, **chat model**
+3. Upload PDF / Word / Markdown / etc., wait until **Ready**, then ask
 
 ## Docker Compose
 
 ```bash
 cp apps/api/.env.example apps/api/.env
-# 编辑 .env：改 SESSION_SECRET、ADMIN_PASSWORD
+# Edit .env: SESSION_SECRET, ADMIN_PASSWORD
 docker compose up --build
 ```
 
-访问 http://localhost （web 反代 api）。Docker 构建时会预下载 Embedding 模型。
+Open http://localhost (web proxies API). The API image build downloads the embedding model.
 
-## 架构要点
+## Architecture
 
-| 组件 | 说明 |
-|------|------|
-| Embedding | 内置 `multilingual-e5-small`（384 维，E5 query/passage 前缀），本地推理 |
-| Chat | OpenAI 兼容 API，管理页配置 |
-| 检索 | pgvector + Postgres FTS，默认 top-8 |
-| 存储 | 原文件本地磁盘；Postgres 存元数据与切片 |
+| Piece | Notes |
+|-------|--------|
+| Embedding | Built-in `multilingual-e5-small` (384-d, E5 query/passage prefixes), local |
+| Chat | OpenAI-compatible API, configured in Admin |
+| Retrieve | pgvector + Postgres FTS, default top-8 |
+| Storage | Original files on local disk; metadata/chunks in Postgres |
 
-**从旧版（云端 Embedding + 1024 维）迁移：** 删除全部已上传文件并重新上传，或清空 `chunks` 后重 ingest。
+**Migrating from cloud Embedding (1024-d):** delete uploaded files and re-upload, or clear `chunks` and re-ingest.
 
-## 测试
+## Tests
 
 ```bash
-# API 健康 + 主路径 UI（需 Vite + API + Postgres）
-cd apps/web && npm run e2e
-
-# 回答质量回归（仅需 API + Postgres + 已配 Chat）
-cd apps/web && npm run e2e:quality
+cd apps/web && npm run e2e          # UI smoke (Vite + API + Postgres)
+cd apps/web && npm run e2e:quality  # Answer quality (API + Chat configured)
 ```
 
-环境变量：`WENDU_ADMIN_USER` / `WENDU_ADMIN_PASSWORD` 覆盖管理员账号。
+Optional env: `WENDU_ADMIN_USER` / `WENDU_ADMIN_PASSWORD`.
 
-## 规格文档
+## Specs & docs
 
-见 [`docs/spec/`](docs/spec/00-索引.md)。桌面安装包等为**远期**规格，当前代码不实现。
+- English hub: [`docs/README.md`](docs/README.md)
+- Chinese specs: [`docs/spec/00-索引.md`](docs/spec/00-索引.md) (desktop package is **future**, not implemented)
 
-## 环境变量（API）
+## API env vars
 
-| 变量 | 默认 | 说明 |
-|------|------|------|
-| `DATABASE_URL` | 见 `.env.example` | Postgres 连接 |
-| `SESSION_SECRET` | — | Cookie 签名，生产必改 |
-| `COOKIE_SECURE` | false | 生产 HTTPS 反代后设 true |
-| `ADMIN_USER` / `ADMIN_PASSWORD` | admin / admin | 种子管理员 |
-| `TEXT_EMBEDDING_LOCAL_PATH` | `apps/api/models/multilingual-e5-small` | 覆盖默认模型目录 |
-| `VECTOR_MIN_SCORE` / `VECTOR_STRONG_SCORE` | 0.28 / 0.38 | 检索门槛 |
-| `CHUNK_SIZE` / `CHUNK_OVERLAP` / `RETRIEVE_K` | 500 / 80 / 8 | 分块与检索条数 |
-| `FILES_DIR` | data/files | 原文件目录 |
+| Variable | Default | Notes |
+|----------|---------|--------|
+| `DATABASE_URL` | see `.env.example` | Postgres |
+| `SESSION_SECRET` | — | Cookie signing; change in production |
+| `COOKIE_SECURE` | false | `true` behind HTTPS |
+| `ADMIN_USER` / `ADMIN_PASSWORD` | admin / admin | Seed admin |
+| `TEXT_EMBEDDING_LOCAL_PATH` | `apps/api/models/multilingual-e5-small` | Override model dir |
+| `VECTOR_MIN_SCORE` / `VECTOR_STRONG_SCORE` | 0.28 / 0.38 | Retrieve gates |
+| `CHUNK_SIZE` / `CHUNK_OVERLAP` / `RETRIEVE_K` | 500 / 80 / 8 | Chunking & top-K |
+| `FILES_DIR` | data/files | Original files |
 
 ## License
 
-见仓库根目录 LICENSE（若有）。
+Code is released under the [MIT License](LICENSE).
+
+Downloaded embedding weights (e.g. `multilingual-e5-small`) remain under their upstream licenses; see the model card on Hugging Face.

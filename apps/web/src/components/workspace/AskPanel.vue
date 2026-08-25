@@ -1,3 +1,8 @@
+<!--
+  Ask reading pane: user Q / assistant A (streaming Markdown), citations, no-evidence.
+  State from useAskSession; composer is AskComposer.
+  Does not own: HTTP (composable), file upload (FileSidebar).
+-->
 <template>
   <section class="ask-panel">
     <div ref="threadEl" class="thread wendu-scroll" @scroll="onThreadScroll">

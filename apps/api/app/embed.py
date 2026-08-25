@@ -1,4 +1,10 @@
-"""Built-in local embeddings (multilingual-e5-small, 384-dim, E5 prefixes)."""
+"""Built-in local embeddings (multilingual-e5-small, 384-dim, E5 prefixes).
+
+Owns: load weights under models/, passage:/query: encode, startup preload.
+Does not own: cloud /embeddings, admin UI fields (users never configure Embedding).
+Constants: MODEL_NAME · EMBED_DIM (single source for schema + inference).
+Entry points: embed_passages() · embed_query() · preload_model()
+"""
 
 from __future__ import annotations
 
