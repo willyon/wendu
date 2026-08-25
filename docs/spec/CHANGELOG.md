@@ -2,6 +2,7 @@
 
 | 日期 | 改了什么 | 涉及文件 |
 |------|----------|----------|
+| 2026-08-25 | code-slim：删死配置/配额表/死 i18n；维度单源 `embed.EMBED_DIM`；规格去掉 Admin Embedding 只读说明；能力问明确仅 Prompt；删 multi-doc e2e | models、config、Admin locales、02–04、implementation |
 | 2026-08-25 | 移除 `instance_settings` embed 列；清理启动时 `ALTER TABLE` 迁移，表结构仍仅 `models.py` + `create_all` | models、bootstrap、04 |
 | 2026-08-25 | 代码落地：本地 Embedding（embed.py）、Chat 三项管理页、P1 检索/分块/概括问法、README | embed、llm、ingest、rag、Admin、README |
 | 2026-08-25 | 当前阶段：仅自托管；桌面标远期；本地 Embedding 默认；Chat 三项；好用 P0/P1 | 01–04、00 |

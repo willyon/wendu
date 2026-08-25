@@ -11,8 +11,6 @@ class Settings(BaseSettings):
     admin_user: str = "admin"
     admin_password: str = "admin"
 
-    # 内置本地 Embedding 维度（multilingual-e5-small）
-    default_embed_dim: int = 384
     text_embedding_local_path: str = ""
     vector_min_score: float = 0.28
     vector_strong_score: float = 0.38
@@ -21,8 +19,6 @@ class Settings(BaseSettings):
     retrieve_k: int = 8
 
     files_dir: str = "data/files"
-
-    public_web_url: str = "http://localhost:5173"
 
 
 settings = Settings()

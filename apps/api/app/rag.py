@@ -347,7 +347,7 @@ def ask_stream(
         try:
             passages = retrieve(db, user_id, question, scoped)
         except AppError as exc:
-            if exc.code in ("EMBED_FAILED", "EMBED_MODEL_MISSING", "PARSE_FAILED"):
+            if exc.code in ("EMBED_FAILED", "EMBED_MODEL_MISSING"):
                 yield from _yield_no_evidence(db, user_id, conversation_id, conv)
                 return
             raise

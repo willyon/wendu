@@ -21,10 +21,8 @@ from app.models import (
     Chunk,
     Conversation,
     File,
-    GlobalUsage,
     InstanceSettings,
     Message,
-    UsageDaily,
     User,
 )
 
@@ -49,10 +47,18 @@ def reset() -> None:
         db.execute(delete(Conversation))
         db.execute(delete(Chunk))
         db.execute(delete(File))
-        db.execute(delete(UsageDaily))
-        db.execute(delete(GlobalUsage))
         db.execute(delete(User))
         db.execute(delete(InstanceSettings))
+        db.commit()
+
+        # 去掉已废弃的配额/邮件表（若仍存在）
+        for table in (
+            "usage_daily",
+            "global_usage",
+            "email_verification_tokens",
+            "password_reset_tokens",
+        ):
+            db.execute(text(f"DROP TABLE IF EXISTS {table} CASCADE"))
         db.commit()
 
         # 开发重置：清空向量后对齐 pgvector 列维度（非日常启动迁移）

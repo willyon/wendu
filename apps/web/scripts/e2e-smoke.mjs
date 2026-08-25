@@ -128,14 +128,6 @@ async function main() {
     ;(await page.getByRole('button', { name: /登录|Log in/ }).count())
       ? ok('入口有登录表单')
       : fail('入口有登录表单')
-    const privacy = await page.locator('.privacy').innerText().catch(() => '')
-    if (/训练|回答|train|files/i.test(privacy)) {
-      ok('入口隐私脚注', privacy.slice(0, 40))
-    } else if (!privacy.trim()) {
-      ok('入口隐私脚注', '未展示（当前 UI 已隐藏）')
-    } else {
-      fail('入口隐私脚注', privacy)
-    }
     await shot(page, '01-landing')
 
     await page.getByRole('button', { name: 'English' }).click()

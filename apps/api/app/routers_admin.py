@@ -2,14 +2,14 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, select, text
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from .accounts import is_login_valid, normalize_login
 from .auth import current_admin
 from .db import get_db
 from .errors import AppError, ok_message
-from .models import Conversation, File, InstanceSettings, UsageDaily, User
+from .models import Conversation, File, InstanceSettings, User
 from .passwords import hash_password, require_password
 from .storage import get_storage
 
@@ -154,17 +154,6 @@ def _purge_user_data(db: Session, user_id: UUID) -> None:
             pass
     db.execute(delete(Conversation).where(Conversation.user_id == user_id))
     db.execute(delete(File).where(File.user_id == user_id))
-    db.execute(delete(UsageDaily).where(UsageDaily.user_id == user_id))
-    for table in ("email_verification_tokens", "password_reset_tokens"):
-        exists = db.execute(
-            text(
-                "SELECT 1 FROM information_schema.tables "
-                "WHERE table_schema = 'public' AND table_name = :t"
-            ),
-            {"t": table},
-        ).scalar()
-        if exists:
-            db.execute(text(f"DELETE FROM {table} WHERE user_id = :uid"), {"uid": user_id})
 
 
 @router.delete("/users/{user_id}")

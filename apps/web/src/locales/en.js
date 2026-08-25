@@ -9,15 +9,11 @@ export default {
   logout: "Log out",
   admin: "Admin",
   workspace: "Workspace",
-  adminTitle: "Admin",
-  adminLead: "Instance settings and user accounts.",
   adminNavAccount: "Account",
   adminNavModel: "Model",
   adminNavUsers: "Users",
   adminPasswordHint: "At least 6 characters.",
-  adminMember: "Member",
   adminChangePassword: "Change my password",
-  adminLlm: "Model settings",
   adminModelIntro:
     "Configure an OpenAI-compatible API for answers. Keys and chat settings are stored only in your local database.",
   adminModelGuideToggle: "How do I get and fill these in?",
@@ -53,9 +49,7 @@ export default {
   adminDeleteFor: "Delete {name}?",
   adminDeleteConfirm:
     "This will delete the account and all of its files and Q&A history. This cannot be undone.",
-  adminUserDeleted: "User deleted",
   adminUsernamePlaceholder: "e.g. alice or alice{'@'}company.com",
-  adminUserCreated: "User created",
   newPassword: "New password",
   confirmPassword: "Confirm password",
   confirmPasswordPlaceholder: "Enter the new password again",
@@ -64,17 +58,11 @@ export default {
   cancel: "Cancel",
   files: "Library",
   ask: "Ask",
-  // privacy: 'Your files are used only to answer your questions—nothing else.',
   langZh: "中文",
   langEn: "English",
   upload: "Upload or drop files",
   uploadDropHint: "Click to browse, or drop files anywhere on this page",
-  uploadShort: "Upload",
-  goAsk: "Ask a question",
-  filesEmpty:
-    "Upload PDF, Word, PPT, spreadsheets, or Markdown. Answers use only these files.",
   uploadTypes: "PDF · Word · PPT · Excel · CSV · Markdown · txt",
-  statusReady: "Ready",
   statusFailed: "Failed",
   statusPending: "Waiting",
   delete: "Delete",
@@ -89,7 +77,6 @@ export default {
   askNoEvidence:
     "Sorry — I couldn't find enough supporting text in your files to answer this. Try rephrasing your question, or check that the relevant content is included.",
   convNew: "New chat",
-  convListTitle: "Chats",
   convUntitled: "New chat",
   convRename: "Rename",
   convDelete: "Delete",
@@ -104,6 +91,5 @@ export default {
   INVALID_LOGIN:
     "Invalid username (2–64 chars, letters, numbers, {'@'}._- only).",
   PASSWORD_REQUIRED: "Please enter your password.",
-  WEAK_PASSWORD: "Password must be at least 6 characters.",
   REQUEST_FAILED: "The request failed. Please try again.",
 };

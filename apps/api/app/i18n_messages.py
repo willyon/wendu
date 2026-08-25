@@ -28,7 +28,6 @@ ZH: dict[str, str] = {
     "USER_DELETED": "用户已删除。",
     "CANNOT_DELETE_SELF": "不能删除当前登录的管理员账号。",
     "CANNOT_DELETE_ADMIN": "不能删除管理员账号。",
-    "INVALID_EMBED_DIM": "向量维度须在 256–4096 之间。",
     "CONVERSATION_NOT_FOUND": "找不到该对话。",
 }
 
@@ -58,7 +57,6 @@ EN: dict[str, str] = {
     "USER_DELETED": "User deleted.",
     "CANNOT_DELETE_SELF": "You cannot delete your own admin account.",
     "CANNOT_DELETE_ADMIN": "Admin accounts cannot be deleted.",
-    "INVALID_EMBED_DIM": "Vector dimension must be between 256 and 4096.",
     "CONVERSATION_NOT_FOUND": "Conversation not found.",
 }
 

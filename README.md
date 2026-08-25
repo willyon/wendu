@@ -91,9 +91,11 @@ cd apps/web && npm run e2e:quality
 |------|------|------|
 | `DATABASE_URL` | 见 `.env.example` | Postgres 连接 |
 | `SESSION_SECRET` | — | Cookie 签名，生产必改 |
+| `COOKIE_SECURE` | false | 生产 HTTPS 反代后设 true |
 | `ADMIN_USER` / `ADMIN_PASSWORD` | admin / admin | 种子管理员 |
 | `TEXT_EMBEDDING_LOCAL_PATH` | `apps/api/models/multilingual-e5-small` | 覆盖默认模型目录 |
-| `VECTOR_MIN_SCORE` | 0.28 | 检索门槛（换模型后可用 e2e:quality 重标） |
+| `VECTOR_MIN_SCORE` / `VECTOR_STRONG_SCORE` | 0.28 / 0.38 | 检索门槛 |
+| `CHUNK_SIZE` / `CHUNK_OVERLAP` / `RETRIEVE_K` | 500 / 80 / 8 | 分块与检索条数 |
 | `FILES_DIR` | data/files | 原文件目录 |
 
 ## License

@@ -1,14 +1,14 @@
 import uuid
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from typing import Optional
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .config import settings
 from .db import Base
+from .embed import EMBED_DIM
 
 
 def _uuid():
@@ -66,7 +66,7 @@ class Chunk(Base):
     file_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("files.id", ondelete="CASCADE"), index=True)
     ordinal: Mapped[int] = mapped_column(Integer)
     text: Mapped[str] = mapped_column(Text)
-    embedding = mapped_column(Vector(settings.default_embed_dim), nullable=True)
+    embedding = mapped_column(Vector(EMBED_DIM), nullable=True)
     tsv = mapped_column(TSVECTOR, nullable=True)
 
     file = relationship("File", back_populates="chunks")
@@ -116,20 +116,3 @@ class Citation(Base):
     file_deleted: Mapped[int] = mapped_column(Integer, default=0)
 
     message = relationship("Message", back_populates="citations")
-
-
-class UsageDaily(Base):
-    __tablename__ = "usage_daily"
-    __table_args__ = (UniqueConstraint("user_id", "day", name="uq_usage_user_day"),)
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
-    day: Mapped[date] = mapped_column(Date)
-    ask_count: Mapped[int] = mapped_column(Integer, default=0)
-
-
-class GlobalUsage(Base):
-    __tablename__ = "global_usage"
-
-    day: Mapped[date] = mapped_column(Date, primary_key=True)
-    ask_count: Mapped[int] = mapped_column(Integer, default=0)

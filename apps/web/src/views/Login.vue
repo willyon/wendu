@@ -9,7 +9,6 @@
         <section class="brand-pane">
           <h1>{{ t("brand") }}</h1>
           <p class="lead">{{ t("tagline") }}</p>
-          <!-- <p class="privacy">{{ t('privacy') }}</p> -->
         </section>
 
         <section class="auth-pane">
@@ -213,13 +212,6 @@ async function submit() {
   margin: 0;
   white-space: nowrap;
 }
-.privacy {
-  margin: 18px 0 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.55;
-  max-width: 28em;
-}
 .auth-pane {
   width: 100%;
   box-sizing: border-box;
@@ -349,12 +341,6 @@ input.invalid {
   .lead {
     font-size: 14.5px;
     white-space: normal;
-    margin-left: auto;
-    margin-right: auto;
-  }
-  .privacy {
-    margin-top: 10px;
-    max-width: 28em;
     margin-left: auto;
     margin-right: auto;
   }

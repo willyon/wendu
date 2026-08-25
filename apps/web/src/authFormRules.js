@@ -8,7 +8,3 @@ export function isLoginValid(value) {
   if (s.length < 2 || s.length > 64) return false
   return LOGIN_RE.test(s)
 }
-
-export function isPasswordLongEnough(value) {
-  return typeof value === 'string' && value.length >= 6
-}
